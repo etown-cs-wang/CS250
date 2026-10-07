@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Limit Theorem Demo</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 20px;
+  }
+
+  h2 {
+    margin-bottom: 5px;
+  }
+
+  .controls {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+
+  .charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+  }
+
+  .chart-box {
+    min-width: 0;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 320px !important;
+  }
+
+  button {
+    padding: 8px 14px;
+    margin-left: 10px;
+    cursor: pointer;
+  }
+
+  .takeaway {
+    margin-top: 20px;
+    padding: 15px;
+    background: #eef6ff;
+    border-left: 4px solid #3578c7;
+  }
+
+  @media (max-width: 700px) {
+    .charts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<h2>Central Limit Theorem</h2>
+
+<p>
+The population below is <strong>not normally distributed</strong>.
+Repeatedly take random samples and calculate the mean of each sample.
+What happens to the distribution of the sample means?
+</p>
+
+<div class="controls">
+  <label for="sampleSize"><strong>Sample size (n):</strong></label>
+
+  <select id="sampleSize">
+    <option value="2">2</option>
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="30" selected>30</option>
+    <option value="50">50</option>
+    <option value="100">100</option>
+  </select>
+
+  <button onclick="runSimulation()">Run 5,000 Samples</button>
+</div>
+
+<div class="charts">
+
+  <div class="chart-box">
+    <h3>Population Distribution</h3>
+    <canvas id="populationChart"></canvas>
+  </div>
+
+  <div class="chart-box">
+    <h3>Sampling Distribution of the Mean</h3>
+    <canvas id="samplingChart"></canvas>
+  </div>
+
+</div>
+
+<div class="takeaway">
+  <strong>Central Limit Theorem:</strong>
+  Even when the population is not normally distributed, the sampling
+  distribution of the sample mean becomes approximately normal as the
+  sample size becomes sufficiently large.
+</div>
+
+<script>
+
+let populationChart;
+let samplingChart;
+
+// Generate an exponential random variable.
+// This gives us a clearly right-skewed, non-normal population.
+function exponentialRandom() {
+  return -Math.log(1 - Math.random());
+}
+
+
+// Generate histogram information.
+function histogram(data, bins = 30) {
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+
+  const width = (max - min) / bins;
+
+  const counts = new Array(bins).fill(0);
+  const labels = [];
+
+  for (let i = 0; i < bins; i++) {
+    labels.push((min + (i + 0.5) * width).toFixed(2));
+  }
+
+  data.forEach(value => {
+    let index = Math.floor((value - min) / width);
+
+    if (index >= bins) {
+      index = bins - 1;
+    }
+
+    counts[index]++;
+  });
+
+  return {
+    labels: labels,
+    counts: counts
+  };
+}
+
+
+// Create the population chart.
+function createPopulationChart() {
+
+  const population = [];
+
+  for (let i = 0; i < 10000; i++) {
+    population.push(exponentialRandom());
+  }
+
+  const hist = histogram(population, 30);
+
+  const ctx = document
+    .getElementById("populationChart")
+    .getContext("2d");
+
+  if (populationChart) {
+    populationChart.destroy();
+  }
+
+  populationChart = new Chart(ctx, {
+    type: "bar",
+
+    data: {
+      labels: hist.labels,
+
+      datasets: [{
+        label: "Population observations",
+        data: hist.counts
+      }]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Value"
+          }
+        },
+
+        y: {
+          title: {
+            display: true,
+            text: "Frequency"
+          }
+        }
+      }
+    }
+  });
+}
+
+
+// Simulate the sampling distribution.
+function runSimulation() {
+
+  const n =
+    parseInt(document.getElementById("sampleSize").value);
+
+  const sampleMeans = [];
+
+  const numberOfSamples = 5000;
+
+  for (let i = 0; i < numberOfSamples; i++) {
+
+    let sum = 0;
+
+    for (let j = 0; j < n; j++) {
+      sum += exponentialRandom();
+    }
+
+    sampleMeans.push(sum / n);
+  }
+
+  const hist = histogram(sampleMeans, 30);
+
+  const ctx = document
+    .getElementById("samplingChart")
+    .getContext("2d");
+
+  if (samplingChart) {
+    samplingChart.destroy();
+  }
+
+  samplingChart = new Chart(ctx, {
+
+    type: "bar",
+
+    data: {
+      labels: hist.labels,
+
+      datasets: [{
+        label: "Sample means",
+        data: hist.counts
+      }]
+    },
+
+    options: {
+
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: {
+          display: false
+        },
+
+        title: {
+          display: true,
+          text:
+            "5,000 Sample Means (n = " + n + ")"
+        }
+      },
+
+      scales: {
+
+        x: {
+          title: {
+            display: true,
+            text: "Sample Mean"
+          }
+        },
+
+        y: {
+          title: {
+            display: true,
+            text: "Frequency"
+          }
+        }
+
+      }
+    }
+  });
+}
+
+
+// Initial display
+createPopulationChart();
+runSimulation();
+
+</script>
+
+</body>
+</html>
